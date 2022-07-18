@@ -95,26 +95,6 @@ local function writeColor(text)
 end
 LOG = {}
 local function log(v) table.insert(LOG, v) end
-local tableButtons = {
-    "set",
-    ["set"] = {
-        "number", "boolean", "string", "nil", "cancel",
-        ["number"] = function(t, k)
-            local number = read()
-            if number:match("^%-?%d+$") then t[k] = tonumber(number:match("^%-?%d+$")) return true end
-            return false
-        end,
-        ["boolean"] = {
-            "true", "false",
-            ["true"] = function(t, k) t[k] = true return true end,
-            ["false"] = function(t, k) t[k] = false return true end
-        },
-        ["string"] = function(t, k) t[k] = read() return false end,
-        ["nil"] = function(t, k) t[k] = nil return false end,
-        ["cancel"] = function() return true end,
-    },
-}
-
 local function view(value)
     if type(value) == "table" then
         if getmetatable(value) then value = getmetatable(value) end
@@ -142,7 +122,25 @@ local function view(value)
     end
     return tocolored(value)
 end
-
+local tableButtons = {
+    "set",
+    ["set"] = {
+        "number", "boolean", "string", "nil", "cancel",
+        ["number"] = function(t, k)
+            local number = read()
+            if number:match("^%-?%d+$") then t[k] = tonumber(number:match("^%-?%d+$")) return true end
+            return false
+        end,
+        ["boolean"] = {
+            "true", "false",
+            ["true"] = function(t, k) t[k] = true return true end,
+            ["false"] = function(t, k) t[k] = false return true end
+        },
+        ["string"] = function(t, k) t[k] = read() return false end,
+        ["nil"] = function(t, k) t[k] = nil return false end,
+        ["cancel"] = function() return true end,
+    },
+}
 local function tableView(value)
     log(value)
     local scroll, selected = 1
@@ -221,6 +219,46 @@ local function tableView(value)
         end
     end
 end
+
+local fileButtons = {
+    "open", "delete", "run"
+}
+local function viewFile(path)
+    --if not path then return end
+    local file = fs.open(path, "r")
+    --if not file then return end
+    local ext
+    if #path:split(".") > 1 then ext = #path:split(".")[#path:split(".")] end
+    local text = file:readAll()
+    local scroll = 1
+    while true do
+        local W, H = term.getSize()
+        term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        term.clear() term.setCursorPos(1, 1)
+        term.setTextColor(colors.black) term.setBackgroundColor(colors.red)
+        write(" X ")
+        term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        printColor(" %magenta%"..path.."%white%")
+        local lines = text:split("\n")
+        local sub = table.sub(lines, scroll, scroll+H-3)
+        for _, v in ipairs(sub) do
+            print(v:sub(1,W))
+            term.setBackgroundColor(colors.black)
+        end
+        while true do
+            local event, p1, p2, p3 = os.pullEvent()
+            if event == "mouse_scroll" then
+                scroll = scroll + p1
+                if scroll < 1 then scroll = 1 elseif scroll > #lines-H+1 then scroll = #lines-H+1 else break end
+            end
+            if event == "mouse_click" and p1 == 1 then
+                if p3 == 1 and (p2 >= 1 and p2 <= 3) then
+                    return
+                end
+            end
+        end
+    end
+end
 local function fileView(path)
     local str, list = "", fs.list(path)
     for i, name in ipairs(list) do
@@ -232,38 +270,55 @@ local function fileView(path)
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
         term.clear() term.setCursorPos(1, 1)
-        printColor("%magenta%/"..path.."%white%")
-        term.setTextColor(colors.black) term.setBackgroundColor(colors.red) print("< ")
+        term.setTextColor(colors.black) term.setBackgroundColor(colors.red) write("< ")
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        printColor(" %magenta%/"..path.."%white%")
         local lines = str:split("\n")
         local sub = table.sub(lines, scroll, scroll+H-3)
         for i, v in ipairs(sub) do
-            if scroll + i == selected then term.setBackgroundColor(colors.gray) end
+            if scroll + i - 1 == selected then term.setBackgroundColor(colors.gray) end
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
         while true do
             local event, p1, p2, p3 = os.pullEvent()
             if event == "mouse_click" and p1 == 1 then
-                if p3 > 2 then
+                if p3 > 1 then
                     if scroll+p3-2 == selected then
-                        if fs.isDir(list[selected-1]) then fileView(path..list[selected-1].."/") break end
+                        if fs.isDir(path.."/"..list[selected]) then
+                            fileView(path..list[selected].."/") break
+                        else
+                            viewFile(path..list[selected])
+                            break
+                        end
                     else
-                        selected = scroll+p3-2
+                        if list[scroll+p3-2] then selected = scroll+p3-2 break end
                     end
-                elseif p3 == 2 and (p2 >= 1 and p2 <= 2) then
+                elseif p3 == 1 and (p2 >= 1 and p2 <= 2) then
                     return
                 end
             end
-            break
+            if event == "mouse_scroll" then
+                if p3 > 1 then
+                    scroll = scroll + p1
+                    if scroll < 1 then scroll = 1 elseif scroll > #lines-H+2 then scroll = #lines-H+2 else break end
+                end
+            end
+        end
+        str, list = "", fs.list(path)
+        for i, name in ipairs(list) do
+            if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
+            else str = str..name.."\n" end
         end
     end
 end
 
 local args = {...}
-if #args == 1 then
+if #args >= 1 then
     if args[1] == "table" then tableView(_G) end
     if args[1] == "files" then fileView("") end
+    if args[1] == "view" then viewFile(args[2]) end
 end
 
-return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView, view = view }
+return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView,
+         fileView = fileView, view = view, viewFile = viewFile }
