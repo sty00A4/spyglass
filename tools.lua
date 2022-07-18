@@ -186,7 +186,7 @@ local function tableView(value)
                 if scroll < 1 then scroll = 1 elseif scroll > #lines-H+3 then scroll = #lines-H+3 else break end
             end
             -- clicking
-            if event == "mouse_click" then
+            if event == "mouse_click" and p1 == 1 then
                 if p3 == 1 then if p2 >= 1 and p2 <= 2 then return end -- back button
                 elseif p3 == H then
                     for label, pos in pairs(buttonPoses) do
@@ -221,15 +221,40 @@ local function tableView(value)
         end
     end
 end
-local function fileView(initPath)
-    local path = initPath
+local function fileView(path)
+    local str, list = "", fs.list(path)
+    for i, name in ipairs(list) do
+        if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
+        else str = str..name.."\n" end
+    end
+    local scroll, selected = 1
     while true do
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
         term.clear() term.setCursorPos(1, 1)
-        print(fs.list(path))
+        printColor("%magenta%/"..path.."%white%")
+        term.setTextColor(colors.black) term.setBackgroundColor(colors.red) print("< ")
+        term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        local lines = str:split("\n")
+        local sub = table.sub(lines, scroll, scroll+H-3)
+        for i, v in ipairs(sub) do
+            if scroll + i == selected then term.setBackgroundColor(colors.gray) end
+            printColor(v)
+            term.setBackgroundColor(colors.black)
+        end
         while true do
             local event, p1, p2, p3 = os.pullEvent()
+            if event == "mouse_click" and p1 == 1 then
+                if p3 > 2 then
+                    if scroll+p3-2 == selected then
+                        if fs.isDir(list[selected-1]) then fileView(path..list[selected-1].."/") break end
+                    else
+                        selected = scroll+p3-2
+                    end
+                elseif p3 == 2 and (p2 >= 1 and p2 <= 2) then
+                    return
+                end
+            end
             break
         end
     end
