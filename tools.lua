@@ -221,5 +221,24 @@ local function tableView(value)
         end
     end
 end
+local function fileView(initPath)
+    local path = initPath
+    while true do
+        local W, H = term.getSize()
+        term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        term.clear() term.setCursorPos(1, 1)
+        print(fs.list(path))
+        while true do
+            local event, p1, p2, p3 = os.pullEvent()
+            break
+        end
+    end
+end
+
+local args = {...}
+if #args == 1 then
+    if args[1] == "table" then tableView(_G) end
+    if args[1] == "files" then fileView("") end
+end
 
 return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView, view = view }
