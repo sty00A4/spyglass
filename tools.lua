@@ -94,26 +94,59 @@ local function writeColor(text)
     end
 end
 
-local function main(value)
-    local scroll, selected = 1
-    local str, content = "", {}
+local tableButtons = {
+    "set",
+    ["set"] = {
+        "number", "boolean", "string", "nil", "cancel",
+        ["number"] = function(t, k)
+            local number = read()
+            if number:match("^%-?%d+$") then t[k] = tonumber(number:match("^%-?%d+$")) return true end
+            return false
+        end,
+        ["boolean"] = {
+            "true", "false",
+            ["true"] = function(t, k) t[k] = true return true end,
+            ["false"] = function(t, k) t[k] = false return true end
+        },
+        ["string"] = function(t, k) t[k] = read() return false end,
+        ["nil"] = function(t, k) t[k] = nil return false end,
+        ["cancel"] = function() return true end,
+    },
+}
+
+local function view(value)
     if type(value) == "table" then
         if getmetatable(value) then value = getmetatable(value) end
         local len = 0
         for k, _ in pairs(value) do if #k > len then len = #k end end
-        str = "{\n" for k, v in pairs(value) do
+        local str, content = "{\n", {}
+        for k, v in pairs(value) do
             str = str.."\t"..tostring(k)..(" "):times(len-#k).." %gray%=%white% "..tocolored(v).."\n"
-            table.insert(content, v)
-        end str = str.."}"
-    elseif type(value) == "function" then
+            table.insert(content, k)
+        end
+        str = str.."}"
+        return str, content
+    end
+    if type(value) == "function" then
         if getmetatable(value) then value = getmetatable(value) end
         local len = 0
         for k, _ in pairs(debug.getinfo(value)) do if #k > len then len = #k end end
-        str = "{\n" for k, v in pairs(debug.getinfo(value)) do
+        local str, content = "{\n", {}
+        for k, v in pairs(debug.getinfo(value)) do
             str = str.."\t"..tostring(k)..(" "):times(len-#k).." %gray%=%white% "..tocolored(v).."\n"
-            table.insert(content, v)
-        end str = str.."}"
-    else str = tocolored(value) end
+            table.insert(content, k)
+        end
+        str = str.."}"
+        return str, content
+    end
+    return tocolored(value)
+end
+
+local function tableView(value)
+    local scroll, selected = 1
+    local buttonMenu = tableButtons
+    local buttonPoses = {}
+    local str, content = view(value)
     while true do
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
@@ -128,6 +161,16 @@ local function main(value)
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
+        -- buttons
+        term.setCursorPos(1, H)
+        term.setBackgroundColor(colors.gray)
+        for _, label in ipairs(buttonMenu) do
+            local start = term.getCursorPos()
+            write(" "..label.." ")
+            local stop = term.getCursorPos()
+            buttonPoses[label] = { start = start, stop = stop }
+        end
+        term.setBackgroundColor(colors.black)
         -- input
         while true do
             local event, p1, p2, p3 = os.pullEvent()
@@ -139,12 +182,26 @@ local function main(value)
             -- clicking
             if event == "mouse_click" then
                 if p3 == 1 then if p2 >= 1 and p2 <= 2 then return end -- back button
+                elseif p3 == H then
+                    for label, pos in pairs(buttonPoses) do
+                        if p2 >= pos.start and p2 <= pos.stop then
+                            if type(buttonMenu[label]) == "table" then
+                                buttonMenu = buttonMenu[label] break
+                            elseif type(buttonMenu[label]) == "function" then
+                                buttonMenu[label](value, content[selected])
+                                str, content = view(value)
+                                buttonMenu = tableButtons
+                                break
+                            end
+                        end
+                    end
+                    break
                 else
                     if content[scroll+p3-3] ~= nil and p3 ~= H then -- if selected anything
-                        if selected == scroll+p3-3 and content[selected] ~= value then
-                            if type(content[selected]) == "table" or type(content[scroll+p3-3]) == "function" then -- if table or function
-                                if content[selected] ~= value then -- if not self select
-                                    main(content[selected]) break -- enter
+                        if selected == scroll+p3-3 and value[content[selected]] ~= value then
+                            if type(value[content[selected]]) == "table" or type(content[selected]) == "function" then -- if table or function
+                                if value[content[selected]] ~= value then -- if not self select
+                                    tableView(value[content[selected]]) break -- enter
                                 end
                             end
                         else
@@ -157,4 +214,4 @@ local function main(value)
     end
 end
 
-return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, main = main }
+return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView }
