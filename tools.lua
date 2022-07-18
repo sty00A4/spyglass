@@ -95,7 +95,7 @@ local function writeColor(text)
 end
 LOG = {}
 local function log(v) table.insert(LOG, v) end
-local function view(value)
+local function getTableView(value)
     if type(value) == "table" then
         if getmetatable(value) then value = getmetatable(value) end
         local len = 0
@@ -146,7 +146,7 @@ local function tableView(value)
     local scroll, selected = 1
     local buttonMenu = tableButtons
     local buttonPoses = {}
-    local str, content = view(value)
+    local str, content = getTableView(value)
     while true do
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
@@ -185,7 +185,7 @@ local function tableView(value)
             end
             -- clicking
             if event == "mouse_click" and p1 == 1 then
-                if p3 == 1 then if p2 >= 1 and p2 <= 2 then return end -- back button
+                if p3 == 1 and (p2 >= 1 and p2 <= 2) and value ~= _G then return -- back button
                 elseif p3 == H then
                     for label, pos in pairs(buttonPoses) do
                         if p2 >= pos.start and p2 <= pos.stop then
@@ -195,7 +195,7 @@ local function tableView(value)
                                 term.setCursorPos(1, H)
                                 term.clearLine()
                                 buttonMenu[label](value, content[selected])
-                                str, content = view(value)
+                                str, content = getTableView(value)
                                 buttonMenu = tableButtons
                                 break
                             end
@@ -220,9 +220,14 @@ local function tableView(value)
     end
 end
 
-local fileButtons = {
-    "open", "delete", "run"
-}
+local function getFileView(path)
+    local str, list = "", fs.list(path)
+    for i, name in ipairs(list) do
+        if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
+        else str = str..name.."\n" end
+    end
+    return str, list
+end
 local function viewFile(path)
     --if not path then return end
     local file = fs.open(path, "r")
@@ -259,13 +264,26 @@ local function viewFile(path)
         end
     end
 end
+local fileButtons = {
+    "open", "delete", "run",
+    ["open"] = function(path, file)
+        if not file then return end
+        return viewFile(path..file)
+    end,
+    ["delete"] = function(path, file)
+        if not file then return end
+        return fs.delete(path..file)
+    end,
+    ["run"] = function(path, file)
+        if not file then return end
+        return shell.run(path..file)
+    end,
+}
 local function fileView(path)
-    local str, list = "", fs.list(path)
-    for i, name in ipairs(list) do
-        if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
-        else str = str..name.."\n" end
-    end
+    multishell.setTitle(1, "#")
+    local str, list = getFileView(path)
     local scroll, selected = 1
+    local buttonMenu, buttonPoses = fileButtons, {}
     while true do
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
@@ -280,21 +298,43 @@ local function fileView(path)
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
+        term.setCursorPos(1, H)
+        term.setBackgroundColor(colors.gray)
+        for _, label in ipairs(buttonMenu) do
+            local start = term.getCursorPos()
+            write(" "..label.." ")
+            local stop = term.getCursorPos()
+            buttonPoses[label] = { start = start, stop = stop }
+        end
+        term.setBackgroundColor(colors.black)
         while true do
             local event, p1, p2, p3 = os.pullEvent()
             if event == "mouse_click" and p1 == 1 then
-                if p3 > 1 then
+                if p3 == H then
+                    for label, pos in pairs(buttonPoses) do
+                        if p2 >= pos.start and p2 <= pos.stop then
+                            if type(buttonMenu[label]) == "table" then
+                                buttonMenu = buttonMenu[label] break
+                            elseif type(buttonMenu[label]) == "function" then
+                                term.setCursorPos(1, H)
+                                term.clearLine()
+                                buttonMenu[label](path, list[selected])
+                                str, list = getFileView(path)
+                                buttonMenu = fileButtons
+                                break
+                            end
+                        end
+                    end
+                    break
+                elseif p3 > 1 then
                     if scroll+p3-2 == selected then
                         if fs.isDir(path.."/"..list[selected]) then
                             fileView(path..list[selected].."/") break
-                        else
-                            viewFile(path..list[selected])
-                            break
                         end
                     else
                         if list[scroll+p3-2] then selected = scroll+p3-2 break end
                     end
-                elseif p3 == 1 and (p2 >= 1 and p2 <= 2) then
+                elseif p3 == 1 and (p2 >= 1 and p2 <= 2) and path ~= "" then
                     return
                 end
             end
@@ -304,11 +344,6 @@ local function fileView(path)
                     if scroll < 1 then scroll = 1 elseif scroll > #lines-H+2 then scroll = #lines-H+2 else break end
                 end
             end
-        end
-        str, list = "", fs.list(path)
-        for i, name in ipairs(list) do
-            if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
-            else str = str..name.."\n" end
         end
     end
 end
@@ -321,4 +356,4 @@ if #args >= 1 then
 end
 
 return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView,
-         fileView = fileView, view = view, viewFile = viewFile }
+         fileView = fileView, getTableView = getTableView, getFileView = getFileView, viewFile = viewFile }
