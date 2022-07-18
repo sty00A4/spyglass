@@ -93,7 +93,8 @@ local function writeColor(text)
         else write(v) end
     end
 end
-
+LOG = {}
+local function log(v) table.insert(LOG, v) end
 local tableButtons = {
     "set",
     ["set"] = {
@@ -118,10 +119,10 @@ local function view(value)
     if type(value) == "table" then
         if getmetatable(value) then value = getmetatable(value) end
         local len = 0
-        for k, _ in pairs(value) do if #k > len then len = #k end end
+        for k, _ in pairs(value) do if #tostring(k) > len then len = #tostring(k) end end
         local str, content = "{\n", {}
         for k, v in pairs(value) do
-            str = str.."\t"..tostring(k)..(" "):times(len-#k).." %gray%=%white% "..tocolored(v).."\n"
+            str = str.."\t"..tostring(k)..(" "):times(len-#tostring(k)).." %gray%=%white% "..tocolored(v).."\n"
             table.insert(content, k)
         end
         str = str.."}"
@@ -130,7 +131,7 @@ local function view(value)
     if type(value) == "function" then
         if getmetatable(value) then value = getmetatable(value) end
         local len = 0
-        for k, _ in pairs(debug.getinfo(value)) do if #k > len then len = #k end end
+        for k, _ in pairs(debug.getinfo(value)) do if #tostring(k) > len then len = #tostring(k) end end
         local str, content = "{\n", {}
         for k, v in pairs(debug.getinfo(value)) do
             str = str.."\t"..tostring(k)..(" "):times(len-#k).." %gray%=%white% "..tocolored(v).."\n"
@@ -143,6 +144,7 @@ local function view(value)
 end
 
 local function tableView(value)
+    log(value)
     local scroll, selected = 1
     local buttonMenu = tableButtons
     local buttonPoses = {}
@@ -174,6 +176,10 @@ local function tableView(value)
         -- input
         while true do
             local event, p1, p2, p3 = os.pullEvent()
+            if term.getPosition then
+                local xoff, yoff = term.getPosition()
+                p2 = p2 - (xoff-1) p3 = p3 - (yoff-1)
+            end
             -- scrolling
             if event == "mouse_scroll" and (p3 ~= 1 and p3 ~= H) then
                 scroll = scroll + p1
@@ -188,6 +194,8 @@ local function tableView(value)
                             if type(buttonMenu[label]) == "table" then
                                 buttonMenu = buttonMenu[label] break
                             elseif type(buttonMenu[label]) == "function" then
+                                term.setCursorPos(1, H)
+                                term.clearLine()
                                 buttonMenu[label](value, content[selected])
                                 str, content = view(value)
                                 buttonMenu = tableButtons
@@ -199,7 +207,7 @@ local function tableView(value)
                 else
                     if content[scroll+p3-3] ~= nil and p3 ~= H then -- if selected anything
                         if selected == scroll+p3-3 and value[content[selected]] ~= value then
-                            if type(value[content[selected]]) == "table" or type(content[selected]) == "function" then -- if table or function
+                            if type(value[content[selected]]) == "table" or type(value[content[selected]]) == "function" then -- if table or function
                                 if value[content[selected]] ~= value then -- if not self select
                                     tableView(value[content[selected]]) break -- enter
                                 end
@@ -214,4 +222,4 @@ local function tableView(value)
     end
 end
 
-return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView }
+return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView, view = view }
