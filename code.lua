@@ -590,7 +590,7 @@ local function operate(ast)
             for _, v in ipairs(delete[#delete]) do v.head[v.index] = nil end
             table.remove(delete)
         end,
-        ["ifa"] = function(node, context)
+        ["if"] = function(node, context)
             local value, err
             for i, case in ipairs(node.cases) do
                 value, _, err = visit(case, context) if err then return value, false, err end
