@@ -308,7 +308,9 @@ local fileButtons = {
     end,
     ["[run]"] = function(path, file)
         if not file then return end
-        return shell.run(path..file)
+        local runTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "run", path..file)
+        multishell.setTitle(runTab,"["..path..file.."]")
+        multishell.setFocus(runTab)
     end,
 }
 local function fileView(path)
@@ -389,6 +391,7 @@ if #args >= 1 then
     if not args[2] then return end
     if args[1] == "view" then viewFile(args[2]) end
     if args[1] == "edit" then shell.run("edit "..args[2]) end
+    if args[1] == "run" then shell.run(args[2]) end
 end
 
 return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView,
