@@ -95,6 +95,7 @@ local function writeColor(text)
 end
 LOG = {}
 local function log(v) table.insert(LOG, v) end
+-- tables
 local function getTableView(value)
     if type(value) == "table" then
         if getmetatable(value) then value = getmetatable(value) end
@@ -123,8 +124,8 @@ local function getTableView(value)
     return tocolored(value)
 end
 local tableButtons = {
-    "set",
-    ["set"] = {
+    "[set]",
+    ["[set]"] = {
         "number", "boolean", "string", "nil", "cancel",
         ["number"] = function(t, k)
             local number = read()
@@ -219,14 +220,31 @@ local function tableView(value)
         end
     end
 end
-
-local function getFileView(path)
-    local str, list = "", fs.list(path)
-    for i, name in ipairs(list) do
-        if fs.isDir(path.."/"..name) then str = str.."%green%"..name.."%white%\n"
-        else str = str..name.."\n" end
+-- files
+local function strBytes(bytes)
+    local unit = "B"
+    local units = {"KB","MB","GB","TB"}
+    for _, u in ipairs(units) do
+        if bytes / 1000 >= 1 then bytes = math.ceil(bytes / 1000) unit = u else break end
     end
-    return str, list
+    return tostring(bytes)..unit
+end
+local function getFilesView(path)
+    local str, list, sizes, wNames, wSizes = "", fs.list(path), {}, 0, 0
+    for _, name in ipairs(list) do if #name > wNames then wNames = #name end end
+    for i, name in ipairs(list) do
+        local size
+        if fs.isDir(path.."/"..name) then size = "<D>"
+        else size = strBytes(fs.getSize(path.."/"..name)) end
+        sizes[i] = size
+        if #size > wSizes then wSizes = #size end
+    end
+    for i, name in ipairs(list) do
+        if fs.isDir(path.."/"..name) then str = str.."%green%"..name..(" "):times(wNames-#name).."  "..sizes[i].."%white%\n"
+        else str = str..name..(" "):times(wNames-#name).."  %gray%"..sizes[i].."%white%\n" end
+        if #name > wNames then wNames = #name end
+    end
+    return str, list, sizes
 end
 local function viewFile(path)
     --if not path then return end
@@ -235,7 +253,7 @@ local function viewFile(path)
     local ext
     if #path:split(".") > 1 then ext = #path:split(".")[#path:split(".")] end
     local text = file:readAll()
-    local scroll = 1
+    local scroll, ctrl = 1, false
     while true do
         local W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
@@ -253,35 +271,49 @@ local function viewFile(path)
         while true do
             local event, p1, p2, p3 = os.pullEvent()
             if event == "mouse_scroll" then
-                scroll = scroll + p1
-                if scroll < 1 then scroll = 1 elseif scroll > #lines-H+1 then scroll = #lines-H+1 else break end
+                if ctrl then scroll = scroll + p1 * 10 else scroll = scroll + p1 end
+                if scroll < 1 then scroll = 1 elseif scroll > #lines-H+3 then scroll = #lines-H+3 else break end
             end
             if event == "mouse_click" and p1 == 1 then
                 if p3 == 1 and (p2 >= 1 and p2 <= 3) then
                     return
                 end
             end
+            if event == "key" then
+                if p1 == keys.leftCtrl then ctrl = true end
+            end
+            if event == "key_up" then
+                if p1 == keys.leftCtrl then ctrl = false end
+            end
         end
     end
 end
 local fileButtons = {
-    "open", "delete", "run",
-    ["open"] = function(path, file)
+    "[open]", "[edit]", "[delete]", "[run]",
+    ["[open]"] = function(path, file)
         if not file then return end
-        return viewFile(path..file)
+        local tab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "view", path..file)
+        multishell.setTitle(tab,"["..file.."]")
+        multishell.setFocus(tab)
     end,
-    ["delete"] = function(path, file)
+    ["[edit]"] = function(path, file)
+        if not file then return end
+        local editTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "edit", path..file)
+        multishell.setTitle(editTab,"["..path..file.."]")
+        multishell.setFocus(editTab)
+    end,
+    ["[delete]"] = function(path, file)
         if not file then return end
         return fs.delete(path..file)
     end,
-    ["run"] = function(path, file)
+    ["[run]"] = function(path, file)
         if not file then return end
         return shell.run(path..file)
     end,
 }
 local function fileView(path)
     multishell.setTitle(1, "#")
-    local str, list = getFileView(path)
+    local str, list = getFilesView(path)
     local scroll, selected = 1
     local buttonMenu, buttonPoses = fileButtons, {}
     while true do
@@ -319,8 +351,9 @@ local function fileView(path)
                                 term.setCursorPos(1, H)
                                 term.clearLine()
                                 buttonMenu[label](path, list[selected])
-                                str, list = getFileView(path)
+                                str, list = getFilesView(path)
                                 buttonMenu = fileButtons
+                                selected = nil
                                 break
                             end
                         end
@@ -328,20 +361,21 @@ local function fileView(path)
                     break
                 elseif p3 > 1 then
                     if scroll+p3-2 == selected then
-                        if fs.isDir(path.."/"..list[selected]) then
-                            fileView(path..list[selected].."/") break
+                        if list[selected] then
+                            if fs.isDir(path.."/"..list[selected]) then
+                                fileView(path..list[selected].."/") break
+                            end
                         end
-                    else
-                        if list[scroll+p3-2] then selected = scroll+p3-2 break end
-                    end
+                    else selected = scroll+p3-2 break end
                 elseif p3 == 1 and (p2 >= 1 and p2 <= 2) and path ~= "" then
                     return
                 end
+                selected = nil
             end
             if event == "mouse_scroll" then
                 if p3 > 1 then
                     scroll = scroll + p1
-                    if scroll < 1 then scroll = 1 elseif scroll > #lines-H+2 then scroll = #lines-H+2 else break end
+                    if scroll < 1 then scroll = 1 elseif scroll > #lines-H+3 then scroll = #lines-H+3 else break end
                 end
             end
         end
@@ -352,8 +386,10 @@ local args = {...}
 if #args >= 1 then
     if args[1] == "table" then tableView(_G) end
     if args[1] == "files" then fileView("") end
+    if not args[2] then return end
     if args[1] == "view" then viewFile(args[2]) end
+    if args[1] == "edit" then shell.run("edit "..args[2]) end
 end
 
 return { tocolored = tocolored, printColor = printColor, writeColor = writeColor, tableView = tableView,
-         fileView = fileView, getTableView = getTableView, getFileView = getFileView, viewFile = viewFile }
+         fileView = fileView, getTableView = getTableView, getFilesView = getFilesView, viewFile = viewFile }
