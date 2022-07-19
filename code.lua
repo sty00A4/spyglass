@@ -72,26 +72,93 @@ string.letters = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "
                    "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
                    "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "_" }
 string.digits = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" }
+local function printColor(...)
+    for j, w in ipairs({...}) do
+        if j > 1 then write("\t") end
+        local text = tostring(w)
+        local prod, temp, i = {}, "", 1
+        while text:sub(i,i) ~= "" do
+            if text:sub(i,i) == "%" then
+                table.insert(prod, temp) temp = "" i=i+1
+                while text:sub(i,i) ~= "" and text:sub(i,i) ~= "%" do
+                    temp = temp .. text:sub(i,i)
+                    i=i+1
+                end
+                i=i+1
+                if colors[temp] then table.insert(prod, colors[temp]) else table.insert(prod, colors.white) end
+                temp = ""
+            else
+                temp = temp .. text:sub(i,i)
+                i=i+1
+            end
+        end
+        table.insert(prod, temp)
+        for _, v in ipairs(prod) do
+            if type(v) == "number" then term.setTextColor(v)
+            else write(v) end
+        end
+    end
+    print()
+end
+local function writeColor(...)
+    for j, w in ipairs({...}) do
+        if j > 1 then write("\t") end
+        local text = tostring(w)
+        local prod, temp, i = {}, "", 1
+        while text:sub(i,i) ~= "" do
+            if text:sub(i,i) == "%" then
+                table.insert(prod, temp) temp = "" i=i+1
+                while text:sub(i,i) ~= "" and text:sub(i,i) ~= "%" do
+                    temp = temp .. text:sub(i,i)
+                    i=i+1
+                end
+                i=i+1
+                if colors[temp] then table.insert(prod, colors[temp]) else table.insert(prod, colors.white) end
+                temp = ""
+            else
+                temp = temp .. text:sub(i,i)
+                i=i+1
+            end
+        end
+        table.insert(prod, temp)
+        for _, v in ipairs(prod) do
+            if type(v) == "number" then term.setTextColor(v)
+            else write(v) end
+        end
+    end
+end
 
 local symbols = {
+    ["end"] = ".",
     ["call"] = "!",
     ["sep"] = ",",
     ["assign"] = "=",
     ["bodyIn"] = "{",
     ["bodyOut"] = "}",
     ["if"] = "?", ["else"] = "~?", ["elseif"] = "*?",
-    ["while"] = "#", ["for"] = ":",
+    ["while"] = ":?", ["for"] = ":",
     ["add"] = "+",
     ["sub"] = "-",
     ["mul"] = "*",
     ["div"] = "/",
+    ["eq"] = "==",
+    ["ne"] = "~=",
+    ["lt"] = "<",
+    ["gt"] = ">",
+    ["le"] = "<=",
+    ["ge"] = ">=",
+    ["and"] = "&",
+    ["or"] = "|",
+    ["not"] = "~",
+    ["concat"] = "..",
+    ["len"] = "#",
     ["evalIn"] = "(",
     ["evalOut"] = ")",
 }
 
 local function Position(idx, ln, col, fn, text)
-    expect(1, idx, "number") expect(2, ln, "number") expect(3, col, "number")
-    expect(4, fn, "string") expect(5, text, "string")
+    --expect(1, idx, "number") expect(2, ln, "number") expect(3, col, "number")
+    --expect(4, fn, "string") expect(5, text, "string")
     return setmetatable(
             {
                 idx = idx, ln = ln, col = col, fn = fn, text = text,
@@ -114,6 +181,19 @@ local function PositionRange(start, stop)
             { __name = "PositionRange" }
     )
 end
+local function mark(pr)
+    local lines = table.sub(pr.text:split("\n"), pr.start.ln, pr.stop.ln)
+    local str = ""
+    if #lines > 1 then
+        return pr:lines()
+    end
+    for i = 1, #lines[1] do
+        if i == pr.start.col then str = str.."%red%" end
+        if i == pr.stop.col+1 then str = str.."%white%" end
+        str = str..lines[1]:sub(i,i)
+    end
+    return str
+end
 local function Error(type_, detail, pr)
     expect(1, type_, "string") expect(2, detail, "string") expect(3, pr, "table")
     return setmetatable(
@@ -122,9 +202,9 @@ local function Error(type_, detail, pr)
                 copy = function(s) return Error(s.type, s.detail, s.pr:copy()) end,
             },
             { __name = "Error", __tostring = function(s)
-                return "in "..s.fn.."\n"
-                ..s.type..": "..s.detail.."\n"
-                ..s.pr:lines()
+                return "%red%in "..s.fn.."\n"
+                ..s.type..": "..s.detail.."\n%white%\n"
+                ..mark(s.pr)
             end }
     )
 end
@@ -137,7 +217,7 @@ local function Token(type_, value, pr)
                 copy = function(s) return Token(s.type, s.value, s.pr:copy()) end
             },
             { __name = "Token", __tostring = function(s)
-                if s.value then return "["..s.type..":"..s.value.."]"
+                if s.value then return "["..s.type..":%green%"..s.value.."%white%]"
                 else return "["..s.type.."]" end
             end }
     )
@@ -151,11 +231,11 @@ local function lex(fn, text)
     local function advance()
         pos.idx = pos.idx + 1
         pos.col = pos.col + 1
+        update()
         if pos:sub() == "\n" then
             pos.ln = pos.ln + 1
             pos.col = 0
         end
-        update()
     end
     advance()
     local function main()
@@ -219,20 +299,6 @@ local function lex(fn, text)
     end
     while char ~= "" do local err = main() if err then return nil, err end end
     return tokens
-end
-
-local function Path(path)
-    return setmetatable(
-            path,
-            { __name = "Path", __tostring = function(s)
-                local str = ""
-                for _, name in ipairs(s) do
-                    str = str .. name .. "."
-                end
-                if #str > 0 then str = str:sub(1,#str-1) end
-                return str
-            end }
-    )
 end
 
 local function Node(type_, index, pr)
@@ -307,7 +373,30 @@ local function parse(tokens)
         end
         return node
     end
-    local body, op, expr, logic, comp, arith, term, factor, atom, number, bool, string, id
+    local body, op, expr, logic, not_, comp, arith, term, len, factor, atom, number, bool, string, id, if_, while_, for_
+    if_ = function()
+        local start, stop = tok.pr.start:copy(), tok.pr.stop:copy()
+        advance()
+        local cases, bodies, case, body_, elsebody, err = {}, {}
+        while tok.type ~= "<eof>" do
+            case, err = expr() if err then return case, err end
+            table.insert(cases, case)
+            if tok.type == "bodyIn" then advance() body_, err = body({"bodyOut"}) if err then return body_, err end
+            else body_, err = op() if err then return body_, err end end
+            table.insert(bodies, body_)
+            stop = body_.pr.stop:copy()
+            if tok.type ~= "elseif" then break end
+            advance()
+        end
+        if tok.type == "else" then
+            advance()
+            if tok.type == "bodyIn" then advance() body_, err = body({"bodyOut"}) if err then return body_, err end
+            else body_, err = op() if err then return body_, err end end
+            elsebody = body_
+            stop = elsebody.pr.stop:copy()
+        end
+        return Node("if",{cases=cases,bodies=bodies,elsebody=elsebody},PositionRange(start, stop))
+    end
     id = function() local tok_=tok:copy() advance() return Node("id",{path={tok_.value}},tok_.pr:copy()) end
     string = function() local tok_=tok:copy() advance() return Node("string",{value=tok_.value},tok_.pr:copy()) end
     bool = function() local tok_=tok:copy() advance() return Node("bool",{value=tok_.value},tok_.pr:copy()) end
@@ -318,13 +407,25 @@ local function parse(tokens)
         if tok.type == "string" then return string() end
         if tok.type == "nil" then return Node("nil",{},tok.pr:copy()) end
         if tok.type == "id" then return id() end
+        if tok.type == "evalIn" then
+            advance()
+            local node, err = expr() if err then return node, err end
+            if tok.type ~= "evalOut" then return node, Error("syntax error", "expected ')'", tok.pr:copy()) end
+            advance()
+            return node
+        end
+        if tok.type == "if" then return if_() end
+        if tok.type == "while" then return while_() end
+        if tok.type == "for" then return for_() end
         return tok:copy(), Error("syntax error","expected number/boolean/string/nil/id, got "..tok.type,tok.pr:copy())
     end
-    factor = function() return unOpLeft(atom, {"sub",}) end
+    factor = function() return unOpLeft(atom, {"sub"}) end
+    len = function() return unOpLeft(atom, {"len"}) end
     term = function() return binOp(factor, {"mul","div"}) end
     arith = function() return binOp(term, {"add","sub"}) end
     comp = function() return binOp(arith, {"eq","ne","lt","gt","le","ge"}) end
-    logic = function() return binOp(comp, {"and","or"}) end
+    not_ = function() return unOpLeft(comp, {"not"}) end
+    logic = function() return binOp(not_, {"and","or"}) end
     expr = function() return logic() end
     op = function()
         local start, stop = tok.pr.start:copy(), tok.pr.stop:copy()
@@ -334,20 +435,20 @@ local function parse(tokens)
             advance()
             local right right, err = expr() if err then return right, err end
             stop = right.pr.stop:copy()
-            return Node("assign",{id=left,value=right},PositionRange(start, stop))
-        end
-        if tok.type == "call" then
+            left = Node("assign",{id=left,value=right},PositionRange(start, stop))
+        elseif tok.type == "call" then
             if left.type ~= "id" then return left, Error("syntax error", "cannot assign "..left.type, left.pr:copy()) end
             advance()
             local args = {}
-            while tok.type ~= "nl" and tok.type ~= "<eof>" do
+            while tok.type ~= "end" and tok.type ~= "<eof>" do
                 local right right, err = expr() if err then return right, err end
                 table.insert(args, right)
                 stop = right.pr.stop:copy()
                 if tok.type == "sep" then advance() end
             end
-            return Node("call",{id=left,args=args},PositionRange(start, stop))
+            left = Node("call",{id=left,args=args},PositionRange(start, stop))
         end
+        if tok.type == "end" then advance() end
         return left
     end
     body = function(endTokens)
@@ -360,8 +461,10 @@ local function parse(tokens)
             local node, err = op() if err then return node, err end
             table.insert(ops, node)
             while tok.type == "nl" do advance() end
+            if tok.type == "<eof>" then break end
         end
         stop = tok.pr.stop:copy()
+        advance()
         if #ops == 0 then return end
         if #ops == 1 then return ops[1]
         else return Node("body",ops, PositionRange(start, stop)) end
@@ -382,7 +485,6 @@ local function operate(ast)
             local path = ""
             for _, id in ipairs(node.path) do
                 if type(head) ~= "table" then return head, false, Error("id error", "cannot index "..type(head), node.pr.copy()) end
-                if not head[id] then return head[id], false, Error("id error", "index "..path..id.." doesn't exist ", node.pr:copy()) end
                 path = path .. id .. "."
                 head = head[id]
             end
@@ -394,11 +496,73 @@ local function operate(ast)
             for i, id in ipairs(node.path) do
                 if i == #node.path then break end
                 if type(head) ~= "table" then return head, false, Error("id error", "cannot index "..type(head), node.pr.copy()) end
-                if not head[id] then return head[id], false, Error("id error", "index "..path..id.." doesn't exist ", node.pr:copy()) end
                 path = path .. id .. "."
                 head = head[id]
             end
             return head
+        end,
+        binOp = function(node, context)
+            local left, right, err
+            left, _, err = visit(node.left, context) if err then return left, false, err end
+            right, _, err = visit(node.right, context) if err then return right, false, err end
+            if node.op == "add" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left + right
+            end
+            if node.op == "sub" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left - right
+            end
+            if node.op == "mul" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left * right
+            end
+            if node.op == "div" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left / right
+            end
+            if node.op == "eq" then return left == right end
+            if node.op == "ne" then return left ~= right end
+            if node.op == "lt" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left < right
+            end
+            if node.op == "gt" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left > right
+            end
+            if node.op == "le" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left <= right
+            end
+            if node.op == "ge" then
+                if type(left) ~= "number" then return left, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.left.pr:copy()) end
+                if type(right) ~= "number" then return right, false, Error("value error","attempt do perform "..node.op.." with "..type(left).." and "..type(right),node.right.pr:copy()) end
+                return left >= right
+            end
+            if node.op == "and" then return left and right end
+            if node.op == "or" then return left or right end
+            return node, false, Error("operation error", "cannot do "..tostring(node.op).." as an binary operation")
+        end,
+        unOp = function(node, context)
+            local value, _, err = visit(node.node, context) if err then return value, false, err end
+            if node.op == "sub" then
+                if type(value) ~= "number" then return value, false, Error("value error","attempt do perform "..node.op.." with "..type(value),node.value.pr:copy()) end
+                return -value
+            end
+            if node.op == "len" then
+                if type(value) ~= "string" and type(value) ~= "table" then return value, false, Error("value error","attempt do perform "..node.op.." with "..type(value),node.value.pr:copy()) end
+                return #value
+            end
+            if node.op == "not" then return not value end
+            return node, false, Error("operation error", "cannot do "..tostring(node.op).." as an unary operation")
         end,
         assign = function(node, context)
             local head, value, err
@@ -415,7 +579,7 @@ local function operate(ast)
                 local value value, __, err = visit(arg, context) if err then return nil, false, err end
                 table.insert(args, value)
             end
-            return func(table.unpack(args))
+            func(table.unpack(args))
         end,
         body = function(node, context)
             table.insert(delete, {})
@@ -425,9 +589,18 @@ local function operate(ast)
             end
             for _, v in ipairs(delete[#delete]) do v.head[v.index] = nil end
             table.remove(delete)
-        end
+        end,
+        ["ifa"] = function(node, context)
+            local value, err
+            for i, case in ipairs(node.cases) do
+                value, _, err = visit(case, context) if err then return value, false, err end
+                if value then return visit(node.bodies[i], context) end
+            end
+            if node.elsebody then return visit(node.elsebody, context) end
+        end,
     }
     visit = function(node, context)
+        expect(1, node, "table") expect(2, context, "table")
         if nodes[node.type] then return nodes[node.type](node, context) end
         return nil, false, Error("not implemented", node.type, node.pr:copy())
     end
@@ -440,12 +613,12 @@ local function runfile(fn)
     if not file then error("file not found: '"..fn.."' ", 2) end
     local text = file.readAll()
     local tokens, ast, returning, value, err
-    tokens, err = lex(fn, text) if err then print(err) return nil, false, err end
-    --for _, tok in ipairs(tokens) do write(tostring(tok)) write(" ") end print()
-    ast, err = parse(tokens) if err then print(err) return nil, false, err end
-    -- ast then print(ast:repr()) end
-    value, returning, err = operate(ast) if err then print(err) return end
-    --print(value)
+    tokens, err = lex(fn, text) if err then printColor(err) return nil, false, err end
+    --for _, tok in ipairs(tokens) do writeColor(tostring(tok)) write(" ") end print("\n")
+    ast, err = parse(tokens) if err then printColor(err) return nil, false, err end
+    --if ast then print(ast:repr()) end print("\n")
+    value, returning, err = operate(ast) if err then printColor(err) return end
+    if value ~= nil then print(value) end
     return value
 end
 
