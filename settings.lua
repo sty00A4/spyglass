@@ -11,5 +11,6 @@ return {
         val = colors.yellow,
         info = colors.magenta,
         dir = colors.blue,
-    }
+    },
+    start_programs = { "files" }
 }

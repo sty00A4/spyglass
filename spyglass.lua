@@ -1,27 +1,60 @@
---shell.run(".spyglass/tools.lua os") os.exit()
--- shell os table files peripheral rednet redstone
-local tableTab = multishell.launch(
-        {shell=shell,multishell=multishell,textutils=textutils,require=require},
-        ".spyglass/tools.lua", "table")
-multishell.setTitle(tableTab,"[tables]")
-local filesTab = multishell.launch(
-        {shell=shell,multishell=multishell,textutils=textutils,require=require},
-        ".spyglass/tools.lua", "files")
-multishell.setTitle(filesTab,"[files]")
-local osTab = multishell.launch(
-        {shell=shell,multishell=multishell,os=os,textutils=textutils,require=require},
-        ".spyglass/tools.lua", "sys")
-multishell.setTitle(osTab,"[sys]")
-multishell.setTitle(1,"[#]")
-multishell.setFocus(osTab)
-
-term.clear()
-term.setCursorPos(1,1)
-local history = {}
-while true do
-    term.setTextColor(colors.gray) write(" > ") term.setTextColor(colors.white) local input = read(nil, history, shell.complete)
-    table.insert(history, input)
-    shell.run(input)
-    multishell.setTitle(1,"[#]")
+require("tools")
+local spSetting = require("settings")
+if type(spSetting.colors) == "table" then for name, color in pairs(spSetting.colors) do colors[name] = color end end
+local function settingsTable(t, prefix)
+    if not prefix then prefix = "" end
+    for name, value in pairs(t) do
+        if type(value) == "table" then
+            settingsTable(value, prefix..tostring(name)..".")
+        else
+            settings.define(prefix..tostring(name))
+            settings.set(prefix..tostring(name), value)
+        end
+    end
 end
---tools.printColor(tools.view(LOG))
+settingsTable(spSetting, "spyglass.")
+
+local buttons = {
+    shell = { program=".spyglass/programs/shell.lua", title=">_" },
+    sys = { program=".spyglass/programs/sys.lua", title="sys" },
+    files = { program=".spyglass/programs/files.lua", title="files" },
+    tables = { program=".spyglass/programs/tables.lua", title="tables" },
+}
+local layout = {
+    { "shell", "sys", "files", "tables" },
+}
+multishell.setTitle(1,"[#]")
+while true do
+    local W, H = term.getSize()
+    local buttonPoses, BX, BY, BW, BH = {}, 1, 3, W, 1
+    for y, row in ipairs(layout) do
+        if type(row) == "table" then
+            for x, name in ipairs(row) do
+                if type(name) == "string" then
+                    buttonPoses[name] = { x1 = math.floor(BX + (x - 1) * (BW / #row)),
+                                          x2 = math.floor(BX + (x - 1) * (BW / #row)) + #name+2,
+                                          y1 = BY + (y - 1) * (BH / #layout), y2 = BY + (y - 1) * (BH / #layout) }
+                end
+            end
+        end
+    end
+    term.clear() term.setCursorPos(W/2-#"SPYGLASS"/2, 1)
+    writeColor("%info%SPYGLASS%std%")
+    for name, pos in pairs(buttonPoses) do
+        term.setCursorPos((math.ceil(pos.x1+(pos.x2-pos.x1)/2)-(#name+2)/2), pos.y1) writeColor("%light%[%std%"..name.."%light%]%std%")
+    end
+    local event, k, x, y = os.pullEvent()
+    log(event, k, x, y)
+    if event == "mouse_click" then
+        for name, pos in pairs(buttonPoses) do
+            if (x >= pos.x1 and x <= pos.x2) and (y >= pos.y1 and y <= pos.y2) then
+                local tab = multishell.launch(
+                        {shell=shell,multishell=multishell,os=os,textutils=textutils,require=require},
+                        buttons[name].program)
+                multishell.setTitle(tab,"["..(buttons[name].title or fs.getName(buttons[name].program)).."]")
+                if k == 1 then multishell.setFocus(tab) end
+                break
+            end
+        end
+    end
+end
