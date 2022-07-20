@@ -124,8 +124,8 @@ local function getTableView(value)
     return tocolored(value)
 end
 local tableButtons = {
-    "[set]",
-    ["[set]"] = {
+    "set",
+    ["set"] = {
         "number", "boolean", "string", "nil", "cancel",
         ["number"] = function(t, k)
             local number = read()
@@ -167,7 +167,7 @@ local function tableView(value)
         term.setBackgroundColor(colors.gray)
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
-            write(" "..label.." ")
+            write(" ["..label.."] ")
             local stop = term.getCursorPos()
             buttonPoses[label] = { start = start, stop = stop }
         end
@@ -289,24 +289,42 @@ local function viewFile(path)
     end
 end
 local fileButtons = {
-    "[open]", "[edit]", "[delete]", "[run]",
-    ["[open]"] = function(path, file)
-        if not file then return end
-        local tab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "view", path..file)
-        multishell.setTitle(tab,"["..file.."]")
-        multishell.setFocus(tab)
+    "new", "open", "delete", "run",
+    ["new"] = function(path)
+        local _, H = term.getSize()
+        term.setCursorPos(1, H) term.clearLine()
+        writeColor("%gray%file name: %white%")
+        local fn = read()
+        local ext = ""
+        local split = fn:split(".") if #split > 1 then ext = split[#split] end
+        local file = fs.open(path..fn, "w") file:write("") file:close()
     end,
-    ["[edit]"] = function(path, file)
-        if not file then return end
-        local editTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "edit", path..file)
-        multishell.setTitle(editTab,"["..path..file.."]")
-        multishell.setFocus(editTab)
-    end,
-    ["[delete]"] = function(path, file)
+    ["open"] = {
+        "view", "edit", "paint",
+        ["view"] = function(path, file)
+            if not file then return end
+            local tab = multishell.launch({ shell = shell, multishell = multishell }, ".spyglass/tools.lua", "view", path .. file)
+            multishell.setTitle(tab, "[" .. file .. "]")
+            multishell.setFocus(tab)
+        end,
+        ["edit"] = function(path, file)
+            if not file then return end
+            local editTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "edit", path..file)
+            multishell.setTitle(editTab,"["..path..file.."]")
+            multishell.setFocus(editTab)
+        end,
+        ["paint"] = function(path, file)
+            if not file then return end
+            local editTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "paint", path..file)
+            multishell.setTitle(editTab,"["..path..file.."]")
+            multishell.setFocus(editTab)
+        end,
+    },
+    ["delete"] = function(path, file)
         if not file then return end
         return fs.delete(path..file)
     end,
-    ["[run]"] = function(path, file)
+    ["run"] = function(path, file)
         if not file then return end
         local runTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "run", path..file)
         multishell.setTitle(runTab,"["..path..file.."]")
@@ -336,7 +354,7 @@ local function fileView(path)
         term.setBackgroundColor(colors.gray)
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
-            write(" "..label.." ")
+            write(" ["..label.."] ")
             local stop = term.getCursorPos()
             buttonPoses[label] = { start = start, stop = stop }
         end
@@ -391,6 +409,7 @@ if #args >= 1 then
     if not args[2] then return end
     if args[1] == "view" then viewFile(args[2]) end
     if args[1] == "edit" then shell.run("edit "..args[2]) end
+    if args[1] == "paint" then shell.run("paint "..args[2]) end
     if args[1] == "run" then shell.run(args[2]) end
 end
 
