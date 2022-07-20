@@ -58,7 +58,6 @@ while true do
                 local tab = multishell.launch(
                         {shell=shell,multishell=multishell,os=os,textutils=textutils,require=require},
                         buttons[name].program)
-                multishell.setTitle(tab,"["..(buttons[name].title or fs.getName(buttons[name].program)).."]")
                 if k == 1 then multishell.setFocus(tab) end
                 break
             end
