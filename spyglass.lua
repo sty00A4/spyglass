@@ -41,7 +41,7 @@ while true do
     term.clear() term.setCursorPos(W/2-#"SPYGLASS"/2, 1)
     writeColor("%info%SPYGLASS%std%")
     for name, pos in pairs(buttonPoses) do
-        term.setCursorPos((math.ceil(pos.x1+(pos.x2-pos.x1)/2)-(#name+2)/2), pos.y1) writeColor("%light%[%std%"..name.."%light%]%std%")
+        term.setCursorPos(pos.x1, pos.y1) writeColor("%light%[%std%"..name.."%light%]%std%")
     end
     local event, k, x, y = os.pullEvent()
     log(event, k, x, y)
