@@ -1,3 +1,4 @@
+term.clear() term.setCursorPos(1, 1)
 require("tools")
 local spSetting = require("settings")
 if type(spSetting.colors) == "table" then for name, color in pairs(spSetting.colors) do colors[name] = color end end
