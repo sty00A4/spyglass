@@ -10,8 +10,8 @@ local filesTab = multishell.launch(
 multishell.setTitle(filesTab,"[files]")
 local osTab = multishell.launch(
         {shell=shell,multishell=multishell,os=os,textutils=textutils,require=require},
-        ".spyglass/tools.lua", "os")
-multishell.setTitle(osTab,"[os]")
+        ".spyglass/tools.lua", "sys")
+multishell.setTitle(osTab,"[sys]")
 multishell.setTitle(1,"[#]")
 multishell.setFocus(osTab)
 
