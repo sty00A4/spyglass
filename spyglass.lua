@@ -1,11 +1,19 @@
+--shell.run(".spyglass/tools.lua os") os.exit()
 -- shell os table files peripheral rednet redstone
-local tableTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "table")
+local tableTab = multishell.launch(
+        {shell=shell,multishell=multishell,textutils=textutils,require=require},
+        ".spyglass/tools.lua", "table")
 multishell.setTitle(tableTab,"[tables]")
-local filesTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "files")
+local filesTab = multishell.launch(
+        {shell=shell,multishell=multishell,textutils=textutils,require=require},
+        ".spyglass/tools.lua", "files")
 multishell.setTitle(filesTab,"[files]")
-local osTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "os")
+local osTab = multishell.launch(
+        {shell=shell,multishell=multishell,os=os,textutils=textutils,require=require},
+        ".spyglass/tools.lua", "os")
 multishell.setTitle(osTab,"[os]")
 multishell.setTitle(1,"[#]")
+--multishell.setFocus(osTab)
 
 term.clear()
 term.setCursorPos(1,1)

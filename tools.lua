@@ -3,6 +3,7 @@ if not term.isColor() then
     colors.cyan = colors.white
     colors.yellow = colors.white
     colors.red = colors.white
+    colors.green = colors.white
 end
 string.split = function(s, sep)
     local t, temp = {}, ""
@@ -33,6 +34,7 @@ table.sub = function(t, i, j)
     end
     return st
 end
+local strings = require("cc.strings")
 
 local function tocolored(value)
     if type(value) == "number" or type(value) == "boolean" or type(value) == "nil" then return "%cyan%"..tostring(value).."%white%" end
@@ -95,6 +97,29 @@ local function writeColor(text)
 end
 LOG = {}
 local function log(v) table.insert(LOG, v) end
+local function confirm(msg)
+    local W, H = term.getSize()
+    term.setBackgroundColor(colors.gray)
+    local lines = strings.wrap(msg, W/2)
+    local w, h = 0, #lines+2
+    for _, line in ipairs(lines) do if #line > w then w = #line end end
+    for i, line in pairs(lines) do
+        term.setCursorPos(W/2-#line/2, H/2-h/2+i)
+        writeColor((" "):times((w-#line)/2+1)..line..(" "):times((w-#line)/2+1))
+    end
+    term.setCursorPos(math.floor(W/2-w/2), math.floor(H/2+h/2)-1)
+    writeColor((" "):times(w+2))
+    term.setCursorPos(math.floor(W/2-w/2), math.floor(H/2+h/2))
+    writeColor("[%green%YES%white%][%red%NO%white%]"..(" "):times(w-#"[YES][NO]"+2))
+    while true do
+        local event, p1, x, y = os.pullEvent()
+        if event == "mouse_click" and p1 == 1 and y == math.floor(H/2+h/2) then
+            if x >= math.floor(W/2-w/2) and x <= math.floor(W/2-w/2)+#"[YES" then return true end
+            if x >= math.floor(W/2-w/2)+#"[YES" and x <= math.floor(W/2-w/2)+#"[YES"+#"[NO]" then return false end
+        end
+        if event == "key" and p1 == keys.enter then return true end
+    end
+end
 -- tables
 local function getTableView(value)
     if type(value) == "table" then
@@ -322,7 +347,7 @@ local fileButtons = {
     },
     ["delete"] = function(path, file)
         if not file then return end
-        return fs.delete(path..file)
+        if confirm("do you wanna delete "..path..file.."?") then return fs.delete(path..file) end
     end,
     ["run"] = function(path, file)
         if not file then return end
@@ -403,7 +428,32 @@ local function fileView(path)
 end
 
 local function osView()
-
+    local W, H = term.getSize()
+    local buttons = {
+        [" [shutdown] "] = { x = 1, y = H, click = function() if confirm("are you sure you wanna shutdown?") then os.shutdown() end end },
+        [" [reboot] "] = { x = 13, y = H, click = function() if confirm("are you sure you wanna reboot?") then os.reboot() end end }
+    }
+    while true do
+        W, H = term.getSize()
+        term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
+        term.clear() term.setCursorPos(1, 1)
+        for name, button in pairs(buttons) do
+            term.setCursorPos(button.x, button.y)
+            if button.color then term.setBackgroundColor(button.color) else term.setBackgroundColor(colors.gray) end
+            writeColor(name)
+        end
+        while true do
+            local event, p1, p2, p3 = os.pullEvent()
+            if event == "mouse_click" and p1 == 1 then
+                for name, button in pairs(buttons) do
+                    if p2 >= button.x and p2 <= button.x + #name and p3 == button.y then
+                        if button.click then button.click() break end
+                    end
+                end
+                break
+            end
+        end
+    end
 end
 
 local args = {...}
