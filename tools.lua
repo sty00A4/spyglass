@@ -16,7 +16,7 @@ string.split = function(s, sep)
 end
 string.times = function(s, n)
     local str = ""
-    for i = 1, n do str = str .. s end
+    for _ = 1, n do str = str .. s end
     return str
 end
 table.entries = function(t)
@@ -223,22 +223,23 @@ local function tableView(value)
         printColor(" "..tocolored(value))
         -- show table
         local lines = str:split("\n")
-        local sub = table.sub(lines, scroll, scroll+H-3)
+        local sub = table.sub(lines, scroll, scroll+H-4)
         for i, v in ipairs(sub) do
             if scroll + i - 2 == selected then term.setBackgroundColor(colors.gray) end
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
         -- buttons
-        term.setCursorPos(1, H)
-        term.setBackgroundColor(colors.gray)
+        term.setCursorPos(1, H-1) term.setBackgroundColor(colors.black)
+        term.clearLine()
+        printColor("%gray%"..("-"):times(W).."%white%")
+        term.clearLine()
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
-            write(" ["..label.."] ")
+            writeColor("%gray%[%white%"..label.."%gray%]%white%")
             local stop = term.getCursorPos()
             buttonPoses[label] = { start = start, stop = stop }
         end
-        term.setBackgroundColor(colors.black)
         -- input
         while true do
             local event, p1, p2, p3 = os.pullEvent()
@@ -249,7 +250,7 @@ local function tableView(value)
             -- scrolling
             if event == "mouse_scroll" and (p3 ~= 1 and p3 ~= H) then
                 scroll = scroll + p1
-                if scroll < 1 then scroll = 1 elseif scroll > #lines-H+3 then scroll = #lines-H+3 else break end
+                if scroll < 1 then scroll = 1 elseif scroll > #lines-H+4 then scroll = #lines-H+4 else break end
             end
             -- clicking
             if event == "mouse_click" and p1 == 1 then
@@ -271,7 +272,7 @@ local function tableView(value)
                     end
                     break
                 else
-                    if content[scroll+p3-3] ~= nil and p3 ~= H then -- if selected anything
+                    if content[scroll+p3-4] ~= nil and p3 ~= H then -- if selected anything
                         if selected == scroll+p3-3 and value[content[selected]] ~= value then
                             if type(value[content[selected]]) == "table" or type(value[content[selected]]) == "function" then -- if table or function
                                 if value[content[selected]] ~= value then -- if not self select
@@ -279,7 +280,7 @@ local function tableView(value)
                                 end
                             end
                         else
-                            selected = scroll+p3-3 break -- select
+                            selected = scroll+p3-4 break -- select
                         end
                     end
                 end
@@ -411,13 +412,16 @@ local function fileView(path)
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
         printColor(" %magenta%/"..path.."%white%")
         local lines = str:split("\n")
-        local sub = table.sub(lines, scroll, scroll+H-3)
+        local sub = table.sub(lines, scroll, scroll+H-4)
         for i, v in ipairs(sub) do
             if scroll + i - 1 == selected then term.setBackgroundColor(colors.gray) end
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
-        term.setCursorPos(1, H) term.setBackgroundColor(colors.black)
+        term.setCursorPos(1, H-1) term.setBackgroundColor(colors.black)
+        term.clearLine()
+        printColor("%gray%"..("-"):times(W).."%white%")
+        term.clearLine()
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
             writeColor("%gray%[%white%"..label.."%gray%]%white%")
@@ -460,13 +464,16 @@ local function fileView(path)
             if event == "mouse_scroll" then
                 if p3 > 1 then
                     scroll = scroll + p1
-                    if scroll < 1 then scroll = 1 elseif scroll > #lines-H+3 then scroll = #lines-H+3 else break end
+                    if scroll < 1 then scroll = 1 elseif scroll > #lines-H+4 then scroll = #lines-H+4 else break end
                 end
             end
         end
     end
 end
 
+local function getComputerType()
+
+end
 local function osView()
     local W, H = term.getSize()
     local buttons = {
@@ -487,8 +494,8 @@ local function osView()
         local tSettings = loadfile(".settings", "r") or {}
         for _, name in pairs(settings.getNames()) do tSettings[name] = settings.get(name) end
         local wNames = 0
-        for name, _ in pairs(tSettings) do if #name > wNames then wNames = #name end end
-        for name, value in pairs(tSettings) do printColor(name..(" "):times(wNames-#name).."%gray% = "..tocolored(value)) end
+        --for name, _ in pairs(tSettings) do if #name > wNames then wNames = #name end end
+        --for name, value in pairs(tSettings) do printColor(name..(" "):times(wNames-#name).."%gray% = "..tocolored(value)) end
         for _, button in pairs(buttons) do
             term.setCursorPos(button.x, button.y)
             if button.color then term.setBackgroundColor(button.color) else term.setBackgroundColor(colors.black) end
