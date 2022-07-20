@@ -1,2 +1,2 @@
 # spyglass
-Craft OS tool for taking a deep look into a computer and controlling it
+light weight os system for the CC Tweaked Minecraft Mod (based on Computercraft)
