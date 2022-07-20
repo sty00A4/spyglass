@@ -13,7 +13,7 @@ local osTab = multishell.launch(
         ".spyglass/tools.lua", "os")
 multishell.setTitle(osTab,"[os]")
 multishell.setTitle(1,"[#]")
---multishell.setFocus(osTab)
+multishell.setFocus(osTab)
 
 term.clear()
 term.setCursorPos(1,1)
