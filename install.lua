@@ -22,6 +22,6 @@ shell.run("wget https://raw.githubusercontent.com/sty00A4/spyglass/main/programs
 print("view")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/spyglass/main/programs/view.lua .spyglass/programs/view.lua")
 print("startup")
-local f = fs.open("startup.lua", "w") f:write('shell.run(".spyglass/home.lua")') f:close()
+local f = fs.open("startup.lua", "w") f.write('shell.run(".spyglass/home.lua")') f:close()
 sleep(5)
 os.reboot()
