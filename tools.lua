@@ -417,15 +417,13 @@ local function fileView(path)
             printColor(v)
             term.setBackgroundColor(colors.black)
         end
-        term.setCursorPos(1, H)
-        term.setBackgroundColor(colors.gray)
+        term.setCursorPos(1, H) term.setBackgroundColor(colors.black)
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
-            write(" ["..label.."] ")
+            writeColor("%gray%[%white%"..label.."%gray%]%white%")
             local stop = term.getCursorPos()
             buttonPoses[label] = { start = start, stop = stop }
         end
-        term.setBackgroundColor(colors.black)
         while true do
             local event, p1, p2, p3 = os.pullEvent()
             if event == "mouse_click" and p1 == 1 then
@@ -472,9 +470,9 @@ end
 local function osView()
     local W, H = term.getSize()
     local buttons = {
-        { name = " [shutdown] ", x = 1, y = H, click = function() if confirm("are you sure you wanna shutdown?") then os.shutdown() end end },
-        { name = " [reboot] ", x = 13, y = H, click = function() if confirm("are you sure you wanna reboot?") then os.reboot() end end },
-        { name = " [change] ", x = math.ceil(W/2), y = 2, click = function()
+        { name = "%gray%[%white%shutdown%gray%]%white%", x = 1, y = H, click = function() if confirm("are you sure you wanna shutdown?") then os.shutdown() end end },
+        { name = "%gray%[%white%reboot%gray%]%white%", x = 11, y = H, click = function() if confirm("are you sure you wanna reboot?") then os.reboot() end end },
+        { name = "%gray%[%white%change%gray%]%white%", x = 1, y = 3, click = function()
             local name = prompt("computer label", 12)
             if name then os.setComputerLabel(name) end
         end },
@@ -483,11 +481,17 @@ local function osView()
         W, H = term.getSize()
         term.setTextColor(colors.white) term.setBackgroundColor(colors.black)
         term.clear()
-        term.setCursorPos(1, 1) write("ID: "..tostring(os.computerID()))
-        term.setCursorPos(1, 2) write("LABEL: "..tostring(os.computerLabel() or ""))
+        term.setCursorPos(1, 1) writeColor("%gray%#"..tostring(os.computerID()).." "..tostring(os.version()))
+        term.setCursorPos(10, 3) writeColor('%white%LABEL%gray%: %red%"'..tostring(os.computerLabel() or "")..'"%white%')
+        term.setCursorPos(1, 5)
+        local tSettings = loadfile(".settings", "r") or {}
+        for _, name in pairs(settings.getNames()) do tSettings[name] = settings.get(name) end
+        local wNames = 0
+        for name, _ in pairs(tSettings) do if #name > wNames then wNames = #name end end
+        for name, value in pairs(tSettings) do printColor(name..(" "):times(wNames-#name).."%gray% = "..tocolored(value)) end
         for _, button in pairs(buttons) do
             term.setCursorPos(button.x, button.y)
-            if button.color then term.setBackgroundColor(button.color) else term.setBackgroundColor(colors.gray) end
+            if button.color then term.setBackgroundColor(button.color) else term.setBackgroundColor(colors.black) end
             writeColor(button.name)
         end
         while true do
