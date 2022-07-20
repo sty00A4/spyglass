@@ -47,7 +47,6 @@ local function getSettings(W)
     return str, list, lengths
 end
 local function main()
-    multishell.setTitle(1, "#")
     local W, H = term.getSize()
     local str, list, lengths = getSettings(W)
     local scroll, selected = 1

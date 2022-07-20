@@ -12,5 +12,5 @@ return {
         info = colors.magenta,
         dir = colors.blue,
     },
-    start_programs = { "files" }
+    start_programs = { ".spyglass/programs/files.lua" }
 }

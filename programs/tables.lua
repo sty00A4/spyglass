@@ -130,4 +130,5 @@ local function main(value)
     end
 end
 
+multishell.setTitle(multishell.getCurrent(), "[tables]")
 main(_G)

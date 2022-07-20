@@ -15,15 +15,21 @@ end
 settingsTable(spSetting, "spyglass.")
 
 local buttons = {
-    shell = { program=".spyglass/programs/shell.lua", title=">_" },
-    sys = { program=".spyglass/programs/sys.lua", title="sys" },
-    files = { program=".spyglass/programs/files.lua", title="files" },
-    tables = { program=".spyglass/programs/tables.lua", title="tables" },
+    shell = { program=".spyglass/programs/shell.lua" },
+    sys = { program=".spyglass/programs/sys.lua" },
+    files = { program=".spyglass/programs/files.lua" },
+    tables = { program=".spyglass/programs/tables.lua" },
 }
 local layout = {
     { "shell", "sys", "files", "tables" },
 }
-multishell.setTitle(1,"[#]")
+multishell.setTitle(multishell.getCurrent(),"[#]")
+if type(spSetting.start_programs) == "table" then
+    for i, path in ipairs(spSetting.start_programs) do
+        local tab = multishell.launch({shell=shell,multishell=multishell,os=os,textutils=textutils,require=require}, path)
+        if k == 1 then multishell.setFocus(tab) end
+    end
+end
 while true do
     local W, H = term.getSize()
     local buttonPoses, BX, BY, BW, BH = {}, 1, 3, W, 1

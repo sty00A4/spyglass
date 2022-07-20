@@ -1,6 +1,7 @@
 require("tools")
 local strings = require("cc.strings")
 local function main(path)
+    multishell.setTitle(multishell.getCurrent(), "["..fs.getName(path).."]")
     --if not path then return end
     local file = fs.open(path, "r")
     --if not file then return end

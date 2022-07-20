@@ -1,5 +1,6 @@
 require("tools")
 
+multishell.setTitle(multishell.getCurrent(), "[>_]")
 term.clear()
 term.setCursorPos(1,1)
 local history = {}
