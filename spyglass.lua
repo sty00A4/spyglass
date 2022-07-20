@@ -1,9 +1,9 @@
 local tools = require("tools")
 
 -- shell os table files peripheral rednet redstone
-local tableTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "table")
+local tableTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "table")
 multishell.setTitle(tableTab,"[tables]")
-local filesTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "files")
+local filesTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "files")
 multishell.setTitle(filesTab,"[files]")
 multishell.setTitle(1,"[#]")
 

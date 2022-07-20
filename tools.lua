@@ -292,13 +292,13 @@ local fileButtons = {
     "[open]", "[edit]", "[delete]", "[run]",
     ["[open]"] = function(path, file)
         if not file then return end
-        local tab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "view", path..file)
+        local tab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "view", path..file)
         multishell.setTitle(tab,"["..file.."]")
         multishell.setFocus(tab)
     end,
     ["[edit]"] = function(path, file)
         if not file then return end
-        local editTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "edit", path..file)
+        local editTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "edit", path..file)
         multishell.setTitle(editTab,"["..path..file.."]")
         multishell.setFocus(editTab)
     end,
@@ -308,7 +308,7 @@ local fileButtons = {
     end,
     ["[run]"] = function(path, file)
         if not file then return end
-        local runTab = multishell.launch({shell=shell,multishell=multishell},"spyglass/tools.lua", "run", path..file)
+        local runTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "run", path..file)
         multishell.setTitle(runTab,"["..path..file.."]")
         multishell.setFocus(runTab)
     end,
