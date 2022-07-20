@@ -100,7 +100,7 @@ local function main(path)
         end
         term.setCursorPos(1, H-1) term.setBackgroundColor(colors.bg)
         term.clearLine()
-        printColor(strings.ensure_width("%light%"..("-"):times(W).."%std%", W))
+        printColor("%light%"..("-"):times(W).."%std%", W)
         term.clearLine()
         for _, label in ipairs(buttonMenu) do
             local start = term.getCursorPos()
