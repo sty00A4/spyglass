@@ -64,6 +64,7 @@ local fileButtons = {
         end,
     },
     ["delete"] = function(path, file)
+        if fs.isReadOnly(path..file) then message(file.." is read only") return end
         if not file then return end
         if confirm("do you wanna delete "..path..file.."?") then return fs.delete(path..file) end
     end,
@@ -74,6 +75,7 @@ local fileButtons = {
         multishell.setFocus(runTab)
     end,
     ["rename"] = function(path, file)
+        if fs.isReadOnly(path..file) then message(file.." is read only") return end
         local name = prompt("rename "..file.." to", 16, file)
         shell.run("rename "..path..file.." "..path..name)
         multishell.setTitle(multishell.getCurrent(), "[files]")
