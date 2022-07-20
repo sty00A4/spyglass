@@ -3,6 +3,8 @@ local tableTab = multishell.launch({shell=shell,multishell=multishell},".spyglas
 multishell.setTitle(tableTab,"[tables]")
 local filesTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "files")
 multishell.setTitle(filesTab,"[files]")
+local osTab = multishell.launch({shell=shell,multishell=multishell},".spyglass/tools.lua", "os")
+multishell.setTitle(osTab,"[os]")
 multishell.setTitle(1,"[#]")
 
 term.clear()

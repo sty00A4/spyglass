@@ -402,10 +402,15 @@ local function fileView(path)
     end
 end
 
+local function osView()
+
+end
+
 local args = {...}
 if #args >= 1 then
     if args[1] == "table" then tableView(_G) end
     if args[1] == "files" then fileView("") end
+    if args[1] == "os" then osView() end
     if not args[2] then return end
     if args[1] == "view" then viewFile(args[2]) end
     if args[1] == "edit" then shell.run("edit "..args[2]) end
