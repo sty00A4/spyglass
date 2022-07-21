@@ -51,7 +51,7 @@ local tableButtons = {
     },
 }
 local function main(value)
-    log(value)
+    multishell.setTitle(multishell.getCurrent(), "[tables]")
     local scroll, selected = 1
     local buttonMenu = tableButtons
     local buttonPoses = {}
@@ -130,5 +130,4 @@ local function main(value)
     end
 end
 
-multishell.setTitle(multishell.getCurrent(), "[tables]")
 main(_G)

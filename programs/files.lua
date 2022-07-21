@@ -82,6 +82,7 @@ local fileButtons = {
     end
 }
 local function main(path)
+    multishell.setTitle(multishell.getCurrent(), "[files]")
     local str, list = getFilesView(path)
     local scroll, selected = 1
     local buttonMenu, buttonPoses = fileButtons, {}
@@ -152,5 +153,4 @@ local function main(path)
     end
 end
 
-multishell.setTitle(multishell.getCurrent(), "[files]")
 local args = {...} if #args == 1 then main(args[1]) else main("") end
